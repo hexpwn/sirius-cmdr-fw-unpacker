@@ -13,6 +13,7 @@ import sys
 import struct
 import os
 import shutil
+from time import sleep
 
 # Check arguments
 if len(sys.argv) != 2:
@@ -23,9 +24,12 @@ else:
     imagefile = sys.argv[1]
 
 # Create filesystem structure
-if os.listdir("FWdump") != -1:
+try:
+    os.listdir("FWdump")
     shutil.rmtree("FWdump", True)
-    
+except FileNotFoundError:
+    pass
+
 os.mkdir("FWdump")
 os.chdir("FWdump")
 
@@ -54,15 +58,16 @@ with open("../" + imagefile, 'rb') as image:
         fn_start    = start + 3 
         fn_end      = fn_start + fn_size
         filename = rawimg[fn_start:fn_end].decode('UTF-8')
-        f_off   = struct.unpack("2H", rawimg[fn_start + 34:fn_start + 38])[0]
-        f_size  = struct.unpack("2H", rawimg[fn_start + 38:fn_start + 42])[0]
+        f_off   = struct.unpack("I", rawimg[fn_start + 34:fn_start + 38])[0]
+        f_size  = struct.unpack("I", rawimg[fn_start + 38:fn_start + 42])[0]
         start += 44
 
         filename = filename.replace("\\","/")
-        if f_size == 65535 and f_off == 65535:
+        if f_size == 0xffffffff and f_off == 0xffffffff:
             dir_flag = True
 
         if dir_flag:
+            print(f"Creating directory {filename}...")
             os.mkdir(filename)
             continue
         else:
